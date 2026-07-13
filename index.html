@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Second Brain OS</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Second Brain">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#4C7CF0; --blue-soft:#4C7CF01a;
+  --green:#2E9E5B; --green-soft:#2E9E5B1a;
+  --red:#E5484D; --red-soft:#E5484D1a;
+  --radius:12px; --radius-sm:8px;
+}
+[data-theme="light"]{
+  --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F5F5F5; --surface-3:#EDEDED;
+  --border:#E4E4E4; --ink:#000000; --muted:#6B6B6B; --muted-2:#9A9A9A;
+  --shadow:0 1px 2px rgba(0,0,0,.03), 0 8px 24px rgba(0,0,0,.05);
+}
+[data-theme="dark"]{
+  --bg:#000000; --surface:#0D0D0D; --surface-2:#1F1F1F; --surface-3:#262626;
+  --border:#2A2A2A; --ink:#FFFFFF; --muted:#9A9A9A; --muted-2:#6B6B6B;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;transition:background .3s,color .3s;-webkit-font-smoothing:antialiased;}
+button,input,textarea,select{font-family:inherit;}
+button{cursor:pointer;border:none;background:none;color:inherit;}
+.mono{font-family:'JetBrains Mono',monospace;}
+::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+#shell{display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+#sidebar{width:230px;flex-shrink:0;border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+.brand{display:flex;align-items:center;gap:9px;padding:6px 8px 18px;}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--blue);}
+.brand span{font-weight:800;font-size:14.5px;letter-spacing:-.01em;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);font-size:13.5px;color:var(--muted);font-weight:500;}
+.nav-item:hover{background:var(--surface-2);color:var(--ink);}
+.nav-item.active{background:var(--surface-2);color:var(--ink);font-weight:600;}
+.nav-item .n{margin-left:auto;font-size:11px;color:var(--muted-2);font-family:'JetBrains Mono',monospace;}
+.nav-sep{height:1px;background:var(--border);margin:10px 6px;}
+.nav-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2);padding:10px 10px 4px;font-weight:600;}
+#sidebar .bottom{margin-top:auto;padding-top:10px;}
+.kbd{border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--muted-2);font-family:'JetBrains Mono',monospace;}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;position:relative;}
+.topbar{position:sticky;top:0;background:var(--bg);z-index:5;display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);}
+.topbar h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em;}
+.topbar .sub{font-size:12px;color:var(--muted);margin-top:1px;}
+.top-actions{display:flex;gap:8px;align-items:center;}
+.icon-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink);}
+.content{padding:24px 28px 80px;}
+
+/* BUTTONS */
+.btn{background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{opacity:.85;}
+.btn.outline{background:transparent;color:var(--ink);border:1px solid var(--border);}
+.btn.outline:hover{border-color:var(--ink);}
+.btn.sm{padding:6px 12px;font-size:12.5px;}
+
+/* CARDS / GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.stat-card .num{font-size:28px;font-weight:800;letter-spacing:-.02em;}
+.stat-card .lbl{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* HOME */
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:22px;flex-wrap:wrap;}
+.hero-greet .eyebrow{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.hero-greet h2{font-size:26px;margin:4px 0 6px;font-weight:800;letter-spacing:-.02em;}
+.hero-greet .quote{font-size:13.5px;color:var(--muted);max-width:420px;}
+.score-ring{width:118px;height:118px;position:relative;flex-shrink:0;}
+.score-ring svg{transform:rotate(-90deg);}
+.score-ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-ring .val b{font-size:26px;font-weight:800;}
+.score-ring .val span{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.section-h{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2);font-weight:700;margin:26px 0 10px;}
+.priority-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--surface);}
+.priority-row .chk{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--muted-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.priority-row .chk.on{background:var(--green);border-color:var(--green);color:#fff;}
+.priority-row .txt{flex:1;font-size:14px;}
+.priority-row .badge{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+
+/* FORMS / MODAL */
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field textarea,.field select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font-size:13.5px;outline:none;}
+.field textarea{resize:vertical;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:flex;align-items:flex-start;justify-content:center;padding:8vh 20px;z-index:50;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:560px;box-shadow:var(--shadow);max-height:80vh;overflow-y:auto;}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);}
+.modal-head h3{margin:0;font-size:15px;}
+.modal-body{padding:18px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);}
+
+/* CAPTURE FAB */
+#fab{position:fixed;bottom:26px;right:32px;width:56px;height:56px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:40;}
+#fab:hover{transform:scale(1.06);}
+
+/* ITEM LIST */
+.item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:9px;}
+.item-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.item-title{font-size:14.5px;font-weight:600;}
+.item-desc{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.45;}
+.item-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;}
+.chip{font-size:10.5px;padding:3px 9px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-weight:500;}
+.chip.blue{background:var(--blue-soft);color:var(--blue);}
+.chip.green{background:var(--green-soft);color:var(--green);}
+.chip.red{background:var(--red-soft);color:var(--red);}
+.chip.gray{background:var(--surface-3);color:var(--muted);}
+.item-actions{display:flex;gap:6px;flex-shrink:0;}
+.mini{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;}
+.mini:hover{color:var(--ink);border-color:var(--ink);}
+.progress-bar{height:5px;background:var(--surface-3);border-radius:99px;overflow:hidden;margin-top:9px;}
+.progress-bar > div{height:100%;background:var(--blue);}
+
+.empty{border:1.5px dashed var(--border);border-radius:var(--radius);padding:44px 20px;text-align:center;color:var(--muted);font-size:13.5px;}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:5px;}
+
+.tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--surface-2);padding:3px;border-radius:999px;width:fit-content;}
+.tabs button{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);}
+.tabs button.active{background:var(--ink);color:var(--bg);}
+
+/* COMMAND PALETTE */
+#cmdk{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-start;justify-content:center;padding-top:12vh;z-index:100;}
+#cmdk.open{display:flex;}
+.cmdk-box{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;}
+.cmdk-input{width:100%;border:none;padding:16px 18px;font-size:16px;outline:none;background:transparent;color:var(--ink);border-bottom:1px solid var(--border);}
+.cmdk-list{max-height:360px;overflow-y:auto;padding:8px;}
+.cmdk-row{padding:10px 12px;border-radius:8px;font-size:13.5px;display:flex;justify-content:space-between;}
+.cmdk-row.sel{background:var(--surface-2);}
+.cmdk-row .t{color:var(--muted-2);font-size:11px;font-family:'JetBrains Mono',monospace;}
+
+/* FOCUS */
+.focus-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:18px;}
+.timer{font-size:72px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-.02em;}
+
+/* AI PANEL */
+.chat-bubble{max-width:80%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.5;margin-bottom:10px;}
+.chat-bubble.user{background:var(--ink);color:var(--bg);margin-left:auto;border-bottom-right-radius:4px;}
+.chat-bubble.ai{background:var(--surface-2);border-bottom-left-radius:4px;}
+.ask-row{display:flex;gap:8px;position:sticky;bottom:0;background:var(--bg);padding:12px 0 0;}
+.ask-row input{flex:1;padding:11px 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2);color:var(--ink);outline:none;font-size:13.5px;}
+.spin{width:14px;height:14px;border:2px solid var(--muted-2);border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite;display:inline-block;}
+@keyframes sp{to{transform:rotate(360deg);}}
+@media(max-width:820px){#sidebar{position:fixed;left:-240px;z-index:60;background:var(--bg);height:100%;transition:.2s;} #sidebar.open{left:0;} .field-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body data-theme="light">
+<div id="shell">
+  <nav id="sidebar">
+    <div class="brand"><div class="dot"></div><span>Second Brain OS</span></div>
+    <div id="navList"></div>
+    <div class="bottom">
+      <div class="nav-item" id="cmdkOpener"><span>🔍</span> Buscar <span class="n"><span class="kbd">⌘K</span></span></div>
+      <div class="nav-item" id="themeToggle"><span>🌙</span> Tema</div>
+    </div>
+  </nav>
+
+  <div id="main">
+    <div class="topbar">
+      <div><h1 id="pageTitle">Home</h1><div class="sub" id="pageSub"></div></div>
+      <div class="top-actions">
+        <button class="btn outline sm" id="askBtn">✨ Preguntar a la IA</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<button id="fab" title="Capturar (C)">+</button>
+
+<div id="cmdk">
+  <div class="cmdk-box">
+    <input class="cmdk-input" id="cmdkInput" placeholder="Buscar o saltar a…">
+    <div class="cmdk-list" id="cmdkList"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- DATA ---------------- */
+const VIEWS = [
+  {id:'home',icon:'🏠',label:'Home'},
+  {sep:'Capturar'},
+  {id:'inbox',icon:'📥',label:'Inbox'},
+  {id:'braindump',icon:'🧠',label:'Brain Dump'},
+  {sep:'Organizar'},
+  {id:'ideas',icon:'💡',label:'Ideas'},
+  {id:'projects',icon:'📁',label:'Proyectos'},
+  {id:'tasks',icon:'✅',label:'Tareas'},
+  {id:'goals',icon:'🎯',label:'Objetivos'},
+  {id:'knowledge',icon:'📚',label:'Conocimiento'},
+  {sep:'Hábitos y reflexión'},
+  {id:'habits',icon:'🔁',label:'Hábitos'},
+  {id:'journal',icon:'📔',label:'Diario'},
+  {id:'review',icon:'🗓️',label:'Revisión semanal'},
+  {sep:'Enfoque'},
+  {id:'focus',icon:'⏱️',label:'Focus Mode'},
+];
+
+const QUOTES = [
+  "La claridad no llega pensando más — llega escribiendo lo que ya pensaste.",
+  "Un sistema en el que confiás vale más que una memoria que se esfuerza.",
+  "No hace falta terminar todo hoy. Hace falta saber qué es lo próximo.",
+  "Cada idea anotada es una preocupación menos dando vueltas.",
+  "Ordenar la cabeza es, primero que nada, sacar todo afuera.",
+];
+
+let state = {
+  theme:'light',
+  inbox:[], ideas:[], projects:[], tasks:[], goals:[], knowledge:[], habits:[], journal:[], reviews:[],
+};
+let view = 'home';
+let saveTimer=null;
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+async function load(){
+  try{
+    const raw = localStorage.getItem('sbos-data');
+    if(raw) state = {...state, ...JSON.parse(raw)};
+  }catch(e){}
+  document.body.setAttribute('data-theme', state.theme);
+  document.getElementById('themeToggle').innerHTML = (state.theme==='light'?'<span>🌙</span> Tema':'<span>☀️</span> Tema');
+  renderNav(); go('home');
+}
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    try{ localStorage.setItem('sbos-data', JSON.stringify(state)); }catch(e){}
+  },300);
+}
+
+/* ---------------- AI HELPER ---------------- */
+async function callAI(type, payload){
+  const res = await fetch('/api/ai', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({type, ...payload})
+  });
+  if(!res.ok) throw new Error('AI request failed');
+  return res.json();
+}
+
+/* ---------------- NAV ---------------- */
+function renderNav(){
+  const box = document.getElementById('navList');
+  box.innerHTML = VIEWS.map(v=>{
+    if(v.sep) return `<div class="nav-label">${v.sep}</div>`;
+    const count = countFor(v.id);
+    return `<div class="nav-item ${view===v.id?'active':''}" data-go="${v.id}"><span>${v.icon}</span>${v.label}${count?`<span class="n">${count}</span>`:''}</div>`;
+  }).join('');
+  box.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>go(el.dataset.go));
+}
+function countFor(id){
+  if(id==='inbox') return state.inbox.filter(i=>!i.processed).length || '';
+  if(id==='tasks') return state.tasks.filter(t=>t.status!=='hecho').length || '';
+  return '';
+}
+function go(id){ view=id; renderNav(); renderPage(); }
+
+/* ---------------- MENTAL CLARITY SCORE ---------------- */
+function clarityScore(){
+  let score = 100;
+  score -= Math.min(30, state.inbox.filter(i=>!i.processed).length*4);
+  score -= Math.min(20, state.tasks.filter(t=>t.status==='pendiente' && t.priority==='alta').length*5);
+  score -= Math.min(15, state.projects.filter(p=>p.status==='estancado').length*8);
+  score -= Math.min(15, state.ideas.filter(i=>i.status!=='procesada').length*2);
+  const habitsToday = state.habits.length ? state.habits.filter(h=>(h.doneDates||[]).includes(todayStr())).length/state.habits.length : 1;
+  score += Math.round(habitsToday*10)-5;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------------- RENDER ROUTER ---------------- */
+function renderPage(){
+  const titleMap = Object.fromEntries(VIEWS.filter(v=>v.id).map(v=>[v.id,v.label]));
+  document.getElementById('pageTitle').textContent = titleMap[view]||'';
+  const subs = {home:'tu panorama de hoy', inbox:'todo lo que capturaste, sin clasificar', braindump:'volcá todo, la IA lo ordena después',
+    ideas:'con puntaje automático', projects:'de la idea a la ejecución', tasks:'lo que hay que hacer', goals:'a dónde vas',
+    knowledge:'lo que aprendiste', habits:'consistencia diaria', journal:'tres preguntas por día', review:'cierre de semana asistido',
+    focus:'una sola cosa a la vez'};
+  document.getElementById('pageSub').textContent = subs[view]||'';
+  const c = document.getElementById('content');
+  const renderers = {home:renderHome, inbox:renderInbox, braindump:renderBrainDump, ideas:renderIdeas, projects:renderProjects,
+    tasks:renderTasks, goals:renderGoals, knowledge:renderKnowledge, habits:renderHabits, journal:renderJournal,
+    review:renderReview, focus:renderFocus};
+  c.innerHTML = '';
+  (renderers[view]||renderHome)(c);
+}
+
+/* ---------------- HOME ---------------- */
+function renderHome(c){
+  const score = clarityScore();
+  const circ = 2*Math.PI*50;
+  const offset = circ - (score/100)*circ;
+  const color = score>=70?'var(--green)':score>=40?'var(--blue)':'var(--red)';
+  const quote = QUOTES[new Date().getDate()%QUOTES.length];
+  const topTasks = [...state.tasks].filter(t=>t.status!=='hecho').sort((a,b)=>prioW(b.priority)-prioW(a.priority)).slice(0,3);
+
+  c.innerHTML = `
+  <div class="hero">
+    <div class="hero-greet">
+      <div class="eyebrow">${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <h2>${greeting()}</h2>
+      <div class="quote">${quote}</div>
+    </div>
+    <div class="score-ring">
+      <svg width="118" height="118"><circle cx="59" cy="59" r="50" fill="none" stroke="var(--surface-3)" stroke-width="9"/>
+      <circle cx="59" cy="59" r="50" fill="none" stroke="${color}" stroke-width="9" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg>
+      <div class="val"><b>${score}</b><span>Clarity</span></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    ${statCard('📁', state.projects.filter(p=>p.status!=='hecho').length, 'Proyectos activos')}
+    ${statCard('✅', state.tasks.filter(t=>t.status!=='hecho').length, 'Tareas pendientes')}
+    ${statCard('💡', state.ideas.length, 'Ideas guardadas')}
+    ${statCard('🎯', state.goals.filter(g=>g.progress<100).length, 'Objetivos en curso')}
+  </div>
+
+  <div class="section-h">Prioridades de hoy</div>
+  ${topTasks.length ? topTasks.map(t=>`
+    <div class="priority-row"><div class="chk ${t.status==='hecho'?'on':''}" onclick="toggleTaskDone('${t.id}')">${t.status==='hecho'?'✓':''}</div>
+    <div class="txt">${esc(t.title)}</div><div class="badge">${t.priority||''}</div></div>`).join('')
+    : `<div class="empty"><b>Nada urgente marcado</b>Andá a Tareas y marcá prioridad alta en lo que más importa hoy.</div>`}
+
+  <div class="section-h">Inbox sin procesar</div>
+  ${state.inbox.filter(i=>!i.processed).length ? `<div class="empty" style="text-align:left;padding:16px 18px;">
+    Tenés <b style="display:inline">${state.inbox.filter(i=>!i.processed).length}</b> capturas sin clasificar.
+    <button class="btn sm" style="margin-top:10px" onclick="go('braindump')">Procesar ahora</button></div>`
+    : `<div class="empty"><b>Inbox limpio</b>Todo lo que capturaste ya tiene un lugar.</div>`}
+  `;
+}
+function greeting(){
+  const h = new Date().getHours();
+  return h<12?'Buen día.':h<19?'Buenas tardes.':'Buenas noches.';
+}
+function statCard(icon,num,lbl){ return `<div class="card stat-card"><div style="font-size:18px">${icon}</div><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`; }
+function prioW(p){ return p==='alta'?3:p==='media'?2:p==='baja'?1:0; }
+function esc(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toggleTaskDone(id){ const t=state.tasks.find(x=>x.id===id); t.status = t.status==='hecho'?'pendiente':'hecho'; persist(); renderPage(); }
+
+/* ---------------- INBOX ---------------- */
+function renderInbox(c){
+  const pend = state.inbox.filter(i=>!i.processed);
+  const done = state.inbox.filter(i=>i.processed);
+  c.innerHTML = `
+    <button class="btn" onclick="openCapture()">+ Capturar algo</button>
+    <div class="section-h">Sin procesar (${pend.length})</div>
+    ${pend.length ? pend.map(i=>`<div class="item"><div class="item-top"><div class="item-title">${esc(i.text)}</div>
+      <div class="item-actions"><button class="mini" onclick="quickProcess('${i.id}')" title="Procesar con IA">✨</button>
+      <button class="mini" onclick="deleteFrom('inbox','${i.id}')">✕</button></div></div>
+      <div class="item-meta"><span class="chip gray">${timeAgo(i.createdAt)}</span></div></div>`).join('')
+      : `<div class="empty"><b>Inbox vacío</b>Usá el botón + (o tocá "C") para tirar cualquier cosa acá sin pensar dónde va.</div>`}
+    ${done.length? `<div class="section-h">Procesadas</div>` + done.slice(0,10).map(i=>`<div class="item" style="opacity:.55"><div class="item-title">${esc(i.text)}</div></div>`).join(''):''}
+  `;
+}
+function openCapture(){
+  showModal('Capturar', `<div class="field"><textarea id="capText" rows="4" placeholder="Lo que sea. Una tarea, una idea, algo para no olvidar…" autofocus></textarea></div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const v = document.getElementById('capText').value.trim();
+      if(!v) return;
+      state.inbox.unshift({id:uid(), text:v, createdAt:Date.now(), processed:false});
+      persist(); closeModal(); go('inbox');
+    }}]);
+}
+async function quickProcess(id){
+  const item = state.inbox.find(i=>i.id===id);
+  await processTexts([item.text]);
+  item.processed = true;
+  persist(); renderPage();
+}
+
+/* ---------------- BRAIN DUMP ---------------- */
+function renderBrainDump(c){
+  c.innerHTML = `
+  <div class="field"><textarea id="dumpArea" rows="14" placeholder="Escribí todo lo que tenés en la cabeza, sin orden, sin filtro. Cuando termines, tocá Procesar con IA y yo lo clasifico en ideas, tareas, notas y recordatorios."></textarea></div>
+  <button class="btn" id="processBtn">✨ Procesar con IA</button>
+  <span class="mono" style="font-size:11.5px;color:var(--muted);margin-left:10px">separá cada pensamiento con un renglón nuevo, ayuda a la clasificación</span>
+  <div id="dumpResult" style="margin-top:18px"></div>
+  `;
+  document.getElementById('processBtn').onclick = async ()=>{
+    const text = document.getElementById('dumpArea').value.trim();
+    if(!text) return;
+    const btn = document.getElementById('processBtn');
+    btn.innerHTML = '<span class="spin"></span> Procesando…'; btn.disabled=true;
+    try{
+      await processTexts(text.split('\n').filter(l=>l.trim()));
+      document.getElementById('dumpArea').value='';
+      document.getElementById('dumpResult').innerHTML = `<div class="empty" style="border-color:var(--green);color:var(--ink)"><b>Listo ✓</b>Se clasificó y distribuyó en Ideas, Tareas, Conocimiento y Objetivos.</div>`;
+      renderNav();
+    }catch(e){
+      document.getElementById('dumpResult').innerHTML = `<div class="empty" style="border-color:var(--red)"><b>No se pudo procesar</b>Hubo un problema hablando con la IA. Probá de nuevo en un momento.</div>`;
+    }
+    btn.innerHTML = '✨ Procesar con IA'; btn.disabled=false;
+  };
+}
+async function processTexts(lines){
+  const parsed = await callAI('classify', {lines});
+  (parsed.ideas||[]).forEach(i=>state.ideas.unshift(newIdea(i.title)));
+  (parsed.tasks||[]).forEach(t=>state.tasks.unshift(newTask(t.title, t.priority)));
+  (parsed.notes||[]).forEach(n=>state.knowledge.unshift(newNote(n.title, n.content)));
+  (parsed.goals||[]).forEach(g=>state.goals.unshift(newGoal(g.title)));
+  persist();
+}
+function newIdea(title){ return {id:uid(), title:title||'Idea', desc:'', category:'General', impact:3, difficulty:3, cost:3, status:'nueva', projectId:null, createdAt:Date.now()}; }
+function newTask(title,priority){ return {id:uid(), title:title||'Tarea', priority:priority||'media', due:null, projectId:null, status:'pendiente', createdAt:Date.now()}; }
+function newNote(title,content){ return {id:uid(), title:title||'Nota', content:content||'', category:'General', createdAt:Date.now()}; }
+function newGoal(title){ return {id:uid(), title:title||'Objetivo', category:'General', target:null, progress:0, nextAction:'', createdAt:Date.now()}; }
+
+/* ---------------- IDEAS ---------------- */
+function ideaScore(i){
+  return Math.max(0, Math.min(100, Math.round(i.impact*20 - i.difficulty*8 - i.cost*6 + 40)));
+}
+function renderIdeas(c){
+  c.innerHTML = `<button class="btn" onclick="openIdeaForm()">+ Nueva idea</button><div class="grid" style="margin-top:16px" id="ideasGrid"></div>`;
+  const grid = document.getElementById('ideasGrid');
+  if(!state.ideas.length){ grid.outerHTML = `<div class="empty"><b>Todavía no hay ideas</b>Anotá la próxima que se te ocurra, o procesá tu Brain Dump.</div>`; return; }
+  grid.innerHTML = [...state.ideas].sort((a,b)=>ideaScore(b)-ideaScore(a)).map(i=>{
+    const proj = i.projectId ? state.projects.find(p=>p.id===i.projectId) : null;
+    return `
+    <div class="card">
+      <div class="item-top"><div class="item-title">${esc(i.title)}</div>
+      <div class="item-actions">${!proj?`<button class="mini" onclick="convertIdeaToProject('${i.id}')" title="Convertir en proyecto">📁</button>`:''}<button class="mini" onclick="deleteFrom('ideas','${i.id}')">✕</button></div></div>
+      ${i.desc?`<div class="item-desc">${esc(i.desc)}</div>`:''}
+      <div class="item-meta">
+        <span class="chip blue">Score ${ideaScore(i)}</span>
+        <span class="chip gray">Impacto ${i.impact}</span>
+        <span class="chip gray">Dificultad ${i.difficulty}</span>
+        <span class="chip gray">${i.category}</span>
+        ${proj?`<span class="chip green" style="cursor:pointer" onclick="go('projects')">📁 ${esc(proj.name)}</span>`:''}
+      </div>
+    </div>`;}).join('');
+}
+function convertIdeaToProject(id){
+  const i = state.ideas.find(x=>x.id===id); if(!i) return;
+  const proj = {id:uid(), name:i.title, goal:i.desc||'', status:'activo', progress:0, nextStep:'', createdAt:Date.now()};
+  state.projects.unshift(proj);
+  i.projectId = proj.id; i.status='procesada';
+  persist(); renderPage();
+}
+function openIdeaForm(){
+  showModal('Nueva idea', `
+    <div class="field"><label>Título</label><input id="f_title" placeholder="¿Qué idea es?"></div>
+    <div class="field"><label>Descripción</label><textarea id="f_desc" rows="2"></textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Impacto (1-5)</label><input id="f_impact" type="number" min="1" max="5" value="3"></div>
+      <div class="field"><label>Dificultad (1-5)</label><input id="f_diff" type="number" min="1" max="5" value="3"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Costo (1-5)</label><input id="f_cost" type="number" min="1" max="5" value="2"></div>
+      <div class="field"><label>Categoría</label><input id="f_cat" value="General"></div>
+    </div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const t = document.getElementById('f_title').value.trim(); if(!t) return;
+      state.ideas.unshift({id:uid(), title:t, desc:document.getElementById('f_desc').value,
+        impact:+document.getElementById('f_impact').value, difficulty:+document.getElementById('f_diff').value,
+        cost:+document.getElementById('f_cost').value, category:document.getElementById('f_cat').value||'General',
+        status:'nueva', createdAt:Date.now()});
+      persist(); closeModal(); renderPage();
+    }}]);
+}
+
+/* ---------------- PROJECTS ---------------- */
+function renderProjects(c){
+  c.innerHTML = `<button class="btn" onclick="openProjectForm()">+ Nuevo proyecto</button><div style="margin-top:16px" id="projList"></div>`;
+  const box = document.getElementById('projList');
+  if(!state.projects.length){ box.innerHTML = `<div class="empty"><b>Sin proyectos activos</b>Convertí una idea en proyecto cuando decidas avanzarla.</div>`; return; }
+  box.innerHTML = state.projects.map(p=>{
+    const linkedIdeas = state.ideas.filter(i=>i.projectId===p.id);
+    return `
+    <div class="item">
+      <div class="item-top"><div class="item-title">${esc(p.name)}</div>
+      <div class="item-actions"><button class="mini" onclick="deleteFrom('projects','${p.id}')">✕</button></div></div>
+      ${p.nextStep?`<div class="item-desc">Próximo paso: ${esc(p.nextStep)}</div>`:''}
+      <div class="progress-bar"><div style="width:${p.progress}%"></div></div>
+      <div class="item-meta">
+        <span class="chip ${p.status==='estancado'?'red':p.status==='hecho'?'green':'blue'}">${p.status}</span>
+        <span class="chip gray">${p.progress}%</span>
+        ${linkedIdeas.length?`<span class="chip gray">💡 ${linkedIdeas.length} idea${linkedIdeas.length===1?'':'s'}</span>`:''}
+      </div>
+    </div>`;}).join('');
+}
+function openProjectForm(){
+  showModal('Nuevo proyecto', `
+    <div class="field"><label>Nombre</label><input id="f_name" placeholder="¿Qué estás armando?"></div>
+    <div class="field"><label>Objetivo</label><textarea id="f_goal" rows="2"></textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Estado</label><select id="f_status"><option value="activo">Activo</option><option value="estancado">Estancado</option><option value="hecho">Hecho</option></select></div>
+      <div class="field"><label>Progreso (%)</label><input id="f_prog" type="number" min="0" max="100" value="0"></div>
+    </div>
+    <div class="field"><label>Próximo paso</label><input id="f_next" placeholder="La única acción concreta que sigue"></div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const n = document.getElementById('f_name').value.trim(); if(!n) return;
+      state.projects.unshift({id:uid(), name:n, goal:document.getElementById('f_goal').value,
+        status:document.getElementById('f_status').value, progress:+document.getElementById('f_prog').value,
+        nextStep:document.getElementById('f_next').value, createdAt:Date.now()});
+      persist(); closeModal(); renderPage();
+    }}]);
+}
+
+/* ---------------- TASKS ---------------- */
+function renderTasks(c){
+  c.innerHTML = `<button class="btn" onclick="openTaskForm()">+ Nueva tarea</button>
+  <div class="tabs" id="taskTabs">
+    <button data-f="all" class="active">Todas</button><button data-f="pendiente">Pendientes</button><button data-f="hecho">Hechas</button>
+  </div>
+  <div id="taskList"></div>`;
+  let filter='all';
+  function draw(){
+    const list = state.tasks.filter(t=> filter==='all'?true:t.status===filter).sort((a,b)=>prioW(b.priority)-prioW(a.priority));
+    document.getElementById('taskList').innerHTML = list.length ? list.map(t=>`
+      <div class="item"><div class="item-top">
+        <div style="display:flex;gap:10px;align-items:flex-start"><div class="priority-row" style="border:none;padding:0;margin:0"></div>
+        <div class="chk ${t.status==='hecho'?'on':''}" onclick="toggleTaskDone('${t.id}');document.getElementById('taskTabs').dispatchEvent(new Event('rerender'))" style="width:18px;height:18px;border-radius:5px;border:1.5px solid var(--muted-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;${t.status==='hecho'?'background:var(--green);border-color:var(--green);color:#fff':''}">${t.status==='hecho'?'✓':''}</div>
+        <div class="item-title" style="${t.status==='hecho'?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div></div>
+        <div class="item-actions"><button class="mini" onclick="deleteFrom('tasks','${t.id}')">✕</button></div>
+      </div>
+      <div class="item-meta"><span class="chip ${t.priority==='alta'?'red':t.priority==='media'?'blue':'gray'}">${t.priority}</span>${t.due?`<span class="chip gray">📅 ${t.due}</span>`:''}</div>
+      </div>`).join('') : `<div class="empty"><b>Nada acá</b>Agregá una tarea o cambiá el filtro.</div>`;
+  }
+  document.querySelectorAll('#taskTabs button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#taskTabs button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    filter=b.dataset.f; draw();
+  });
+  document.getElementById('taskTabs').addEventListener('rerender', draw);
+  draw();
+}
+function openTaskForm(){
+  showModal('Nueva tarea', `
+    <div class="field"><label>Título</label><input id="f_title"></div>
+    <div class="field-row">
+      <div class="field"><label>Prioridad</label><select id="f_prio"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select></div>
+      <div class="field"><label>Fecha</label><input id="f_due" type="date"></div>
+    </div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const t=document.getElementById('f_title').value.trim(); if(!t) return;
+      state.tasks.unshift({id:uid(), title:t, priority:document.getElementById('f_prio').value, due:document.getElementById('f_due').value||null, status:'pendiente', createdAt:Date.now()});
+      persist(); closeModal(); renderPage();
+    }}]);
+}
+
+/* ---------------- GOALS ---------------- */
+function renderGoals(c){
+  c.innerHTML = `<button class="btn" onclick="openGoalForm()">+ Nuevo objetivo</button><div style="margin-top:16px" id="goalList"></div>`;
+  const box = document.getElementById('goalList');
+  box.innerHTML = state.goals.length ? state.goals.map(g=>`
+    <div class="item"><div class="item-top"><div class="item-title">${esc(g.title)}</div>
+    <div class="item-actions"><button class="mini" onclick="deleteFrom('goals','${g.id}')">✕</button></div></div>
+    ${g.nextAction?`<div class="item-desc">Próxima acción: ${esc(g.nextAction)}</div>`:''}
+    <div class="progress-bar"><div style="width:${g.progress}%"></div></div>
+    <div class="item-meta"><span class="chip gray">${g.category}</span><span class="chip blue">${g.progress}%</span>${g.target?`<span class="chip gray">🎯 ${g.target}</span>`:''}</div>
+    </div>`).join('') : `<div class="empty"><b>Sin objetivos cargados</b>Definí uno: vida, salud, negocios, finanzas, aprendizaje.</div>`;
+}
+function openGoalForm(){
+  showModal('Nuevo objetivo', `
+    <div class="field"><label>Título</label><input id="f_title"></div>
+    <div class="field-row">
+      <div class="field"><label>Categoría</label><select id="f_cat"><option>Vida</option><option>Salud</option><option>Negocios</option><option>Finanzas</option><option>Aprendizaje</option><option>Familia</option></select></div>
+      <div class="field"><label>Fecha objetivo</label><input id="f_target" type="date"></div>
+    </div>
+    <div class="field"><label>Próxima acción</label><input id="f_next"></div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const t=document.getElementById('f_title').value.trim(); if(!t) return;
+      state.goals.unshift({id:uid(), title:t, category:document.getElementById('f_cat').value, target:document.getElementById('f_target').value||null, progress:0, nextAction:document.getElementById('f_next').value, createdAt:Date.now()});
+      persist(); closeModal(); renderPage();
+    }}]);
+}
+
+/* ---------------- KNOWLEDGE ---------------- */
+function renderKnowledge(c){
+  c.innerHTML = `<button class="btn" onclick="openNoteForm()">+ Nueva nota</button><div class="grid" style="margin-top:16px" id="kbGrid"></div>`;
+  const grid = document.getElementById('kbGrid');
+  grid.innerHTML = state.knowledge.length ? state.knowledge.map(n=>`
+    <div class="card"><div class="item-top"><div class="item-title">${esc(n.title)}</div>
+    <div class="item-actions"><button class="mini" onclick="deleteFrom('knowledge','${n.id}')">✕</button></div></div>
+    <div class="item-desc">${esc(n.content).slice(0,140)}${n.content.length>140?'…':''}</div>
+    <div class="item-meta"><span class="chip gray">${n.category}</span></div></div>`).join('')
+    : `<div class="empty"><b>Base de conocimiento vacía</b>Guardá acá lo que vayas aprendiendo.</div>`;
+}
+function openNoteForm(){
+  showModal('Nueva nota', `
+    <div class="field"><label>Título</label><input id="f_title"></div>
+    <div class="field"><label>Contenido</label><textarea id="f_content" rows="5"></textarea></div>
+    <div class="field"><label>Categoría</label><input id="f_cat" value="General"></div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const t=document.getElementById('f_title').value.trim(); if(!t) return;
+      state.knowledge.unshift({id:uid(), title:t, content:document.getElementById('f_content').value, category:document.getElementById('f_cat').value||'General', createdAt:Date.now()});
+      persist(); closeModal(); renderPage();
+    }}]);
+}
+
+/* ---------------- HABITS ---------------- */
+function renderHabits(c){
+  c.innerHTML = `<button class="btn" onclick="openHabitForm()">+ Nuevo hábito</button><div style="margin-top:16px" id="habitList"></div>`;
+  const box = document.getElementById('habitList');
+  box.innerHTML = state.habits.length ? state.habits.map(h=>{
+    const done = (h.doneDates||[]).includes(todayStr());
+    const streak = calcStreak(h.doneDates||[]);
+    return `<div class="item"><div class="item-top">
+      <div style="display:flex;align-items:center;gap:10px"><div class="mini" style="${done?'background:var(--green);color:#fff;border-color:var(--green)':''}" onclick="toggleHabit('${h.id}')">${done?'✓':''}</div>
+      <div class="item-title">${esc(h.name)}</div></div>
+      <div class="item-actions"><button class="mini" onclick="deleteFrom('habits','${h.id}')">✕</button></div></div>
+      <div class="item-meta"><span class="chip green">🔥 racha ${streak}</span></div></div>`;
+  }).join('') : `<div class="empty"><b>Sin hábitos</b>Sumá algo simple y diario: tomar agua, leer, meditar.</div>`;
+}
+function calcStreak(dates){
+  let s=0, d=new Date();
+  while(dates.includes(d.toISOString().slice(0,10))){ s++; d.setDate(d.getDate()-1); }
+  return s;
+}
+function toggleHabit(id){
+  const h = state.habits.find(x=>x.id===id); h.doneDates = h.doneDates||[];
+  const t = todayStr();
+  h.doneDates = h.doneDates.includes(t) ? h.doneDates.filter(x=>x!==t) : [...h.doneDates, t];
+  persist(); renderPage();
+}
+function openHabitForm(){
+  showModal('Nuevo hábito', `<div class="field"><label>Nombre</label><input id="f_name" placeholder="Ej: Tomar agua, Leer 10 páginas…"></div>`,
+    [{label:'Guardar', primary:true, action:()=>{
+      const n=document.getElementById('f_name').value.trim(); if(!n) return;
+      state.habits.unshift({id:uid(), name:n, doneDates:[], createdAt:Date.now()});
+      persist(); closeModal(); renderPage();
+    }}]);
+}
+
+/* ---------------- JOURNAL ---------------- */
+function renderJournal(c){
+  const today = state.journal.find(j=>j.date===todayStr());
+  c.innerHTML = `
+    <div class="card">
+      <div class="field"><label>¿Qué hice hoy?</label><textarea id="j1" rows="2">${today?esc(today.did):''}</textarea></div>
+      <div class="field"><label>¿Qué aprendí?</label><textarea id="j2" rows="2">${today?esc(today.learned):''}</textarea></div>
+      <div class="field"><label>¿Qué mejoraré mañana?</label><textarea id="j3" rows="2">${today?esc(today.improve):''}</textarea></div>
+      <button class="btn" id="saveJournal">Guardar entrada de hoy</button>
+    </div>
+    <div class="section-h">Entradas anteriores</div>
+    ${state.journal.filter(j=>j.date!==todayStr()).slice(0,10).map(j=>`
+      <div class="item"><div class="item-title mono" style="font-size:12px">${j.date}</div>
+      <div class="item-desc">${esc(j.did)}</div></div>`).join('') || `<div class="empty"><b>Sin historial todavía</b></div>`}
+  `;
+  document.getElementById('saveJournal').onclick=()=>{
+    const entry = {date:todayStr(), did:document.getElementById('j1').value, learned:document.getElementById('j2').value, improve:document.getElementById('j3').value};
+    state.journal = state.journal.filter(j=>j.date!==todayStr());
+    state.journal.unshift(entry);
+    persist(); renderPage();
+  };
+}
+
+/* ---------------- WEEKLY REVIEW ---------------- */
+function renderReview(c){
+  c.innerHTML = `
+    <div class="card">
+      <button class="btn outline sm" id="aiSummaryBtn" style="margin-bottom:14px">✨ Generar resumen de la semana con IA</button>
+      <div id="aiSummaryBox"></div>
+      <div class="field"><label>¿Qué lograste esta semana?</label><textarea id="r1" rows="2"></textarea></div>
+      <div class="field"><label>¿Qué quedó pendiente?</label><textarea id="r2" rows="2"></textarea></div>
+      <div class="field"><label>¿Qué vas a eliminar?</label><textarea id="r3" rows="2"></textarea></div>
+      <div class="field"><label>¿Qué vas a delegar?</label><textarea id="r4" rows="2"></textarea></div>
+      <div class="field"><label>¿Qué proyecto vas a avanzar la próxima semana?</label><textarea id="r5" rows="2"></textarea></div>
+      <button class="btn" id="saveReview">Cerrar revisión de la semana</button>
+    </div>
+    <div class="section-h">Revisiones anteriores</div>
+    ${state.reviews.slice(0,8).map(r=>`<div class="item"><div class="item-title mono" style="font-size:12px">${r.date}</div><div class="item-desc">${esc(r.achieved)}</div></div>`).join('') || `<div class="empty"><b>Todavía no hiciste una revisión</b></div>`}
+  `;
+  document.getElementById('saveReview').onclick=()=>{
+    state.reviews.unshift({date:todayStr(), achieved:document.getElementById('r1').value, pending:document.getElementById('r2').value,
+      eliminate:document.getElementById('r3').value, delegate:document.getElementById('r4').value, advance:document.getElementById('r5').value});
+    persist(); renderPage();
+  };
+  document.getElementById('aiSummaryBtn').onclick = async ()=>{
+    const btn = document.getElementById('aiSummaryBtn');
+    btn.innerHTML = '<span class="spin"></span> Generando…'; btn.disabled = true;
+    const weekAgo = Date.now() - 7*24*60*60*1000;
+    const doneTasks = state.tasks.filter(t=>t.status==='hecho' && t.createdAt>=weekAgo).map(t=>t.title);
+    const pendingTasks = state.tasks.filter(t=>t.status!=='hecho').map(t=>`${t.title} (${t.priority})`);
+    const journalWeek = state.journal.filter(j=>new Date(j.date).getTime()>=weekAgo).map(j=>j.did).filter(Boolean);
+    const stalled = state.projects.filter(p=>p.status==='estancado').map(p=>p.name);
+    const context = `Tareas completadas esta semana: ${doneTasks.join('; ')||'ninguna registrada'}.
+Tareas pendientes: ${pendingTasks.join('; ')||'ninguna'}.
+Notas del diario esta semana: ${journalWeek.join(' | ')||'sin entradas'}.
+Proyectos estancados: ${stalled.join('; ')||'ninguno'}.`;
+    try{
+      const parsed = await callAI('review', {context});
+      document.getElementById('r1').value = parsed.achieved||'';
+      document.getElementById('r2').value = parsed.pending||'';
+      document.getElementById('r3').value = parsed.eliminate||'';
+      document.getElementById('r5').value = parsed.advance||'';
+      document.getElementById('aiSummaryBox').innerHTML = `<div class="empty" style="border-color:var(--green);color:var(--ink);text-align:left;padding:12px 14px;margin-bottom:14px"><b style="font-size:13px">Borrador listo ✓</b>Revisalo y ajustalo antes de guardar — es un punto de partida, no la última palabra.</div>`;
+    }catch(e){
+      document.getElementById('aiSummaryBox').innerHTML = `<div class="empty" style="border-color:var(--red);text-align:left;padding:12px 14px;margin-bottom:14px"><b style="font-size:13px">No se pudo generar</b>Probá de nuevo en un momento, o completá los campos a mano.</div>`;
+    }
+    btn.innerHTML = '✨ Generar resumen de la semana con IA'; btn.disabled = false;
+  };
+}
+
+/* ---------------- FOCUS MODE ---------------- */
+let focusTimer=null, focusSecs=25*60;
+function renderFocus(c){
+  const pending = state.tasks.filter(t=>t.status!=='hecho');
+  c.innerHTML = `
+    <div class="focus-wrap">
+      <select id="focusTask" style="padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2);color:var(--ink);max-width:340px">
+        <option value="">Elegí una tarea (opcional)</option>
+        ${pending.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join('')}
+      </select>
+      <div class="timer" id="focusTimer">25:00</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="focusStart">Iniciar</button>
+        <button class="btn outline" id="focusReset">Reiniciar</button>
+      </div>
+    </div>`;
+  updateFocusDisplay();
+  document.getElementById('focusStart').onclick = ()=>{
+    const btn = document.getElementById('focusStart');
+    if(focusTimer){ clearInterval(focusTimer); focusTimer=null; btn.textContent='Iniciar'; return; }
+    btn.textContent='Pausar';
+    focusTimer = setInterval(()=>{
+      focusSecs--; updateFocusDisplay();
+      if(focusSecs<=0){ clearInterval(focusTimer); focusTimer=null; btn.textContent='Iniciar'; }
+    },1000);
+  };
+  document.getElementById('focusReset').onclick = ()=>{
+    clearInterval(focusTimer); focusTimer=null; focusSecs=25*60;
+    document.getElementById('focusStart').textContent='Iniciar';
+    updateFocusDisplay();
+  };
+}
+function updateFocusDisplay(){
+  const m = String(Math.floor(focusSecs/60)).padStart(2,'0'), s=String(focusSecs%60).padStart(2,'0');
+  const el = document.getElementById('focusTimer'); if(el) el.textContent = `${m}:${s}`;
+}
+
+/* ---------------- GENERIC HELPERS ---------------- */
+function deleteFrom(coll,id){ state[coll] = state[coll].filter(x=>x.id!==id); persist(); renderPage(); }
+function timeAgo(ts){ const d=Math.floor((Date.now()-ts)/60000); if(d<1)return'ahora'; if(d<60)return `hace ${d}m`; const h=Math.floor(d/60); if(h<24)return `hace ${h}h`; return `hace ${Math.floor(h/24)}d`; }
+
+/* ---------------- MODAL ---------------- */
+function showModal(title, bodyHtml, actions){
+  const wrap = document.createElement('div');
+  wrap.className='overlay'; wrap.id='activeOverlay';
+  wrap.innerHTML = `<div class="modal"><div class="modal-head"><h3>${title}</h3><button class="mini" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-foot">${actions.map((a,i)=>`<button class="btn ${a.primary?'':'outline'}" id="modalAct${i}">${a.label}</button>`).join('')}</div></div>`;
+  document.body.appendChild(wrap);
+  actions.forEach((a,i)=>document.getElementById('modalAct'+i).onclick=a.action);
+  wrap.onclick=(e)=>{ if(e.target===wrap) closeModal(); };
+}
+function closeModal(){ const o=document.getElementById('activeOverlay'); if(o) o.remove(); }
+
+/* ---------------- COMMAND PALETTE ---------------- */
+function allSearchable(){
+  const list=[];
+  const push=(arr,type,icon)=>arr.forEach(x=>list.push({title:x.title||x.name, type, icon, id:x.id}));
+  push(state.ideas,'Idea','💡'); push(state.projects,'Proyecto','📁'); push(state.tasks,'Tarea','✅');
+  push(state.goals,'Objetivo','🎯'); push(state.knowledge,'Nota','📚'); push(state.habits,'Hábito','🔁');
+  VIEWS.filter(v=>v.id).forEach(v=>list.push({title:'Ir a '+v.label, type:'Navegar', icon:v.icon, goTo:v.id}));
+  return list;
+}
+function openCmdk(){
+  document.getElementById('cmdk').classList.add('open');
+  const input = document.getElementById('cmdkInput'); input.value=''; input.focus();
+  drawCmdk('');
+}
+function closeCmdk(){ document.getElementById('cmdk').classList.remove('open'); }
+function drawCmdk(q){
+  const items = allSearchable().filter(i=>i.title.toLowerCase().includes(q.toLowerCase())).slice(0,30);
+  document.getElementById('cmdkList').innerHTML = items.length ? items.map(i=>`
+    <div class="cmdk-row" data-goto="${i.goTo||''}">${i.icon} ${esc(i.title)}<span class="t">${i.type}</span></div>`).join('')
+    : `<div class="cmdk-row"><span class="t">sin resultados</span></div>`;
+  document.querySelectorAll('.cmdk-row[data-goto]').forEach(r=>r.onclick=()=>{ if(r.dataset.goto){ go(r.dataset.goto); closeCmdk(); } });
+}
+document.getElementById('cmdkInput').addEventListener('input', e=>drawCmdk(e.target.value));
+document.getElementById('cmdkOpener').onclick = openCmdk;
+document.getElementById('cmdk').addEventListener('click', e=>{ if(e.target.id==='cmdk') closeCmdk(); });
+
+/* ---------------- AI ASK PANEL ---------------- */
+function openAskPanel(){
+  showModal('Preguntar a la IA', `
+    <div id="chatBox" style="max-height:340px;overflow-y:auto;margin-bottom:4px"></div>
+    <div class="ask-row"><input id="askInput" placeholder="¿Qué debería hacer hoy?"><button class="btn sm" id="askSend">Enviar</button></div>
+  `, []);
+  document.querySelector('.modal-foot').style.display='none';
+  document.getElementById('askSend').onclick = sendAsk;
+  document.getElementById('askInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendAsk(); });
+}
+async function sendAsk(){
+  const input = document.getElementById('askInput');
+  const q = input.value.trim(); if(!q) return;
+  const box = document.getElementById('chatBox');
+  box.innerHTML += `<div class="chat-bubble user">${esc(q)}</div>`;
+  input.value='';
+  const thinkingId = 'th'+uid();
+  box.innerHTML += `<div class="chat-bubble ai" id="${thinkingId}"><span class="spin"></span> pensando…</div>`;
+  box.scrollTop = box.scrollHeight;
+  const context = `Tareas pendientes: ${state.tasks.filter(t=>t.status!=='hecho').map(t=>`${t.title} (prioridad ${t.priority})`).join('; ')||'ninguna'}.
+Ideas: ${state.ideas.map(i=>i.title).join('; ')||'ninguna'}.
+Proyectos: ${state.projects.map(p=>`${p.name} (${p.status}, ${p.progress}%)`).join('; ')||'ninguno'}.
+Objetivos: ${state.goals.map(g=>g.title).join('; ')||'ninguno'}.
+Mental Clarity Score actual: ${clarityScore()}/100.`;
+  try{
+    const {answer} = await callAI('ask', {question:q, context});
+    document.getElementById(thinkingId).outerHTML = `<div class="chat-bubble ai">${esc(answer)}</div>`;
+  }catch(e){
+    document.getElementById(thinkingId).outerHTML = `<div class="chat-bubble ai">No pude conectarme en este momento. Probá de nuevo.</div>`;
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ---------------- GLOBAL EVENTS ---------------- */
+document.getElementById('fab').onclick = openCapture;
+document.getElementById('askBtn').onclick = openAskPanel;
+document.getElementById('themeToggle').onclick = ()=>{
+  state.theme = state.theme==='light'?'dark':'light';
+  document.body.setAttribute('data-theme', state.theme);
+  document.getElementById('themeToggle').innerHTML = (state.theme==='light'?'<span>🌙</span> Tema':'<span>☀️</span> Tema');
+  persist();
+};
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); openCmdk(); }
+  else if(e.key==='Escape'){ closeCmdk(); closeModal(); }
+  else if(e.key.toLowerCase()==='c' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){ openCapture(); }
+});
+
+load();
+if('serviceWorker' in navigator){ window.addEventListener('load', ()=>navigator.serviceWorker.register('/sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>

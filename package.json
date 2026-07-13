@@ -1,0 +1,9 @@
+{
+  "name": "second-brain-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Second Brain OS — sistema personal de claridad mental",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
